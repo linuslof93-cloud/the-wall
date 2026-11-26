@@ -1,46 +1,88 @@
-## Installation
+# The Wall – OKD
 
-Jag byggde The Walls webbimage med Podman och publicerade den som quay.io/limpich/the-wall:v2. Databasen använder Jonas PostgreSQL-image quay.io/kurs/postgresql:2026-10-29. Installationsfilerna ligger i okd/.
+**Namn:** Linus Löf  
+**Projekt:** The Wall – containerteknik  
+**GitHub:** https://github.com/linuslof93-cloud/the-wall  
+**Route:** https://the-wall-student-linus-lof93jobb-gmail-com.apps.okd.cloud2.se/
 
-Du behöver Bash, oc och tillgång till ditt tilldelade OKD-projekt. Klustret behöver kunna hämta båda images från Quay.io och tilldela 1 GiB lagring via gp3-csi. HPA:n behöver tillgång till poddarnas CPU-mätvärden.
+## Om projektet
 
-Beroenden:
+Jag har byggt och driftsatt The Wall med Flask, Gunicorn och PostgreSQL i OKD. Webbappen och databasen körs i separata Poddar. Meddelandena lagras på en PVC så att de finns kvar efter omstarter.
 
-The Wall V1 quay.io/limpich/the-wall:v1
-THe wall V2 quay.io/limpich/the-wall:v2
-Postgresql quay.io/postgresql:21206-10-29
+Jag utgick från Jonas Björks The Wall:
 
-imagen utgår ifron python 3.12-slim och installerar flask, psycog & gunicorn från requirements.txt
+- **Upstream-commit:** `caa199b60b0218675bc2156f0dff00131d464512`
+- **Egna ändringar:** Anpassad Containerfile för OKD, v2-rubrik, YAML-filer för driftsättning, hälsokontroller, resurser, HPA och NetworkPolicy.
 
-## OKD.
+## Images och beroenden
 
-Kör kommandona ifrån reports rot .
+| Komponent | Image |
+|---|---|
+| The Wall v1 | `quay.io/limpich/the-wall:v1` |
+| The Wall v2 | `quay.io/limpich/the-wall:v2` |
+| PostgreSQL | `quay.io/kurs/postgresql:2026-10-29` |
 
-## Välj projekt
+Registry: **Quay.io**
 
+Webbimagen bygger på `python:3.12-slim` och installerar Flask, Psycopg och Gunicorn via `requirements.txt`. De exakta Python-beroendena finns i den filen.
+
+## Bygga webbimagen
+
+Kör från projektets rot:
+
+```bash
+podman build -t quay.io/limpich/the-wall:v2 .
+podman push quay.io/limpich/the-wall:v2
+```
+
+För att ladda upp imagen behöver du behörighet till mitt Quay.io-repository. Den publicerade v2-imagen kan även användas direkt.
+
+## Installation i OKD
+
+Du behöver Git, `oc`, åtkomst till ett OKD-projekt och ett kluster som kan hämta images från Quay.io.
+
+Hämta projektet:
+
+```bash
+git clone https://github.com/linuslof93-cloud/the-wall.git
+cd the-wall
+```
+
+Logga in i OKD och välj projekt:
+
+```bash
+oc login https://api.okd.cloud2.se:6443
 oc project DITT_PROJEKTNAMN
 oc whoami
+```
 
-## Skapa dina egna secrets för databasen.
+### 1. Databasuppgifter
 
-Öppna okd/database-secret.yaml och fyll i egna värden för POSTGRES_USER och POSTGRES_PASSWORD. Både wall-db & wall-webb läser database-secret. Kör sedan oc apply -f okd/database-secret.yaml från repots rot. Filen som lämnas in innehåller exempelvärden. 
+Filen `okd/database-secret.yaml` innehåller exempeluppgifter.
 
+Ändra lösenordet till ett eget innan installationen. Behåll användarnamnet `walluser`, eftersom databasen använder det.
 
+```bash
+oc apply -f okd/database-secret.yaml
+```
 
+Använd inte mitt exempellösenord i en riktig installation.
 
-## PostgreSQL &  Volym
-Kör kommandona från repots rot. Vid en ny installation skapas en tom volym när wall-db-data skapas för första gången. Om PVC:n redan finns återanvänds den.
+### 2. PostgreSQL och lagring
 
+```bash
 oc apply -f okd/wall-db-data.yaml
 oc apply -f okd/wall-db-service.yaml
 oc apply -f okd/wall-db-deployment.yaml
 oc rollout status deployment/wall-db --timeout=180s
 oc get pvc wall-db-data
+```
 
-Dubbelkolla att PVC:n står som bound.
+PVC:n ska visa `Bound`. Vid en ny installation används en tom volym. Om samma PVC redan finns återanvänds datan.
 
-## Starta webappen
+### 3. Starta webbappen
 
+```bash
 oc apply -f okd/wall-configmap.yaml
 oc apply -f okd/wall-db-networkpolicy.yaml
 oc apply -f okd/wall-web-service.yaml
@@ -48,14 +90,32 @@ oc apply -f okd/wall-web-deployment.yaml
 oc rollout status deployment/wall-web --timeout=180s
 oc apply -f okd/the-wall-route.yaml
 oc apply -f okd/wall-web-hpa.yaml
+```
 
-## Kolla installationen 
-Kör oc get route the-wall och öppna adressen från kolumnen HOST/PORT med https:// framför. Vid en ny installation ska meddelandelistan vara tom. Skriv ett testmeddelande och kontrollera att det visas efter att du skickat det.
+Route ska peka på `wall-web`-Service. HPA:n använder minst 2 och högst 3 webb-Poddar.
 
+Använd inte `oc apply -f okd/`, eftersom mappen även innehåller äldre manifest och testfiler.
+
+## Verifiering
+
+Kontrollera att allt har startat:
+
+```bash
+oc get pods
 oc get deploy wall-web wall-db
 oc get pvc wall-db-data
 oc get hpa wall-web-hpa
 oc get route the-wall
+```
 
-Kontrollera att båda Deployments har redo repliker och att PVC:n är Bound. Öppna adressen från kolumnen HOST/PORT med https:// framför. Vid uppstart med en ny tom volym ska sidan visa v2-rubriken och en tom meddelandelista. Skriv ett meddelande på bollplanket och starta om /ta bort poddarna för att se att datan stannar kvar. 
+Kontrollera att båda Deployments har redo Poddar och att PVC:n är `Bound`.
 
+Öppna Route-adressen med HTTPS. Vid en ny installation ska sidan visa v2-rubriken och en tom meddelandelista.
+
+Skriv ett testmeddelande och kontrollera att det visas. Vid återstart med samma PVC ska tidigare meddelanden finnas kvar.
+
+## Drift och tester
+
+- Driftinstruktioner: [Runbook](drift/runbook.md)
+- Genomförda tester: [Verifieringsprotokoll](tester/verifieringsprotokoll.md)
+- Driftincidenter: [Incidentlogg](drift/incidentlogg.md)
