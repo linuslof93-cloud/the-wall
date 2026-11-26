@@ -1,87 +1,272 @@
-# Runbook
+# Runbook – The Wall
 
-## 1. Bygga en image
+Den här runbooken beskriver hur jag bygger, installerar, kontrollerar och felsöker The Wall i OKD.
 
-Jag går till projektmappen och bygger en ny image från min Containerfile:
+GitHub: https://github.com/linuslof93-cloud/the-wall
 
-cd ~/the-wall
+Route: https://the-wall-student-linus-lof93jobb-gmail-com.apps.okd.cloud2.se/
+
+## 1. Hämta projektet och bygga en image
+
+För att återskapa lösningen behövs Git, Podman, oc och tillgång till ett OKD-projekt.
+
+Jag hämtar projektet från GitHub:
+
+```bash
+git clone https://github.com/linuslof93-cloud/the-wall.git
+cd the-wall
+```
+
+Jag bygger webbappens image från min Containerfile:
+
+```bash
 podman build -t quay.io/limpich/the-wall:v2 .
+```
 
-Sedan laddar jag upp den till Quay.io:
+Sedan laddar jag upp imagen till Quay.io:
 
+```bash
 podman push quay.io/limpich/the-wall:v2
+```
+
+För att pusha krävs inloggning och rättigheter till Quay.io. Den publicerade v2-imagen kan också användas direkt utan att byggas igen.
+
+Webbappen använder Python, Flask, Psycopg och Gunicorn. Databasen använder PostgreSQL-imagen `quay.io/kurs/postgresql:2026-10-29`.
 
 ## 2. Installera i OKD
 
-Jag loggar in i OKD och väljer mitt projekt.
+Jag loggar in i OKD och väljer projektet där applikationen ska köras.
 
-YAML-filerna finns i mappen `~/the-wall/okd/`.
+```bash
+oc login https://api.okd.cloud2.se:6443
+oc project MITT_PROJEKT
+```
 
-Först behöver databasen sin Secret och lagringsvolym. Sedan skapas databasen, webbappen och deras Services. Till sist används Route, NetworkPolicy och HPA.
+`MITT_PROJEKT` byts ut mot namnet på det projekt som ska användas.
 
-Jag använder `oc apply -f` med respektive YAML-fil för att skapa resurserna.
+YAML-filerna finns i mappen `okd/`.
+
+### Databasuppgifter
+
+I GitHub finns `okd/database-secret.yaml` med ett exempellösenord.
+
+Jag gör en separat kopia för installationen:
+
+```bash
+cp okd/database-secret.yaml okd/database-secret-local.yaml
+```
+
+Jag öppnar kopian och ändrar `POSTGRES_PASSWORD` till ett eget lösenord.
+
+```bash
+vim okd/database-secret-local.yaml
+```
+
+Jag ska inte lägga upp filen med mitt riktiga lösenord på GitHub.
+
+Sedan skapar jag Secret i OKD:
+
+```bash
+oc apply -f okd/database-secret-local.yaml
+```
+
+### Installera databasen
+
+Jag skapar först databassens lagring och Service:
+
+```bash
+oc apply -f okd/wall-db-data.yaml
+oc apply -f okd/wall-db-service.yaml
+```
+
+Sedan startar jag PostgreSQL:
+
+```bash
+oc apply -f okd/wall-db-deployment.yaml
+```
+
+Jag kontrollerar att databasen är redo:
+
+```bash
+oc rollout status deployment/wall-db
+oc get pvc
+```
+
+PVC:n heter `wall-db-data` och ska visa `Bound`.
+
+### Installera webbappen
+
+Jag skapar ConfigMap och webbappens Service:
+
+```bash
+oc apply -f okd/wall-configmap.yaml
+oc apply -f okd/wall-web-service.yaml
+```
+
+Sedan lägger jag till nätverkspolicyn och webbappens Deployment:
+
+```bash
+oc apply -f okd/wall-db-networkpolicy.yaml
+oc apply -f okd/wall-web-deployment.yaml
+```
+
+Till sist skapar jag HPA och Route:
+
+```bash
+oc apply -f okd/wall-web-hpa.yaml
+oc apply -f okd/the-wall-route.yaml
+```
+
+Route ska peka på Service `wall-web`.
+
+Jag använder inte `oc apply -f okd/` eftersom mappen även innehåller äldre YAML-filer och testfiler som inte ska installeras.
 
 ## 3. Kontrollera att allt fungerar
 
-Jag kontrollerar Poddarna:
+Jag kontrollerar att Poddarna körs:
 
+```bash
 oc get pods
+```
 
-Jag kontrollerar också att Deploymenten fungerar:
+Sedan kontrollerar jag båda Deployments:
 
+```bash
+oc rollout status deployment/wall-db
 oc rollout status deployment/wall-web
+```
 
-Sedan öppnar jag The Wall via Route och kontrollerar att gamla meddelanden visas och att jag kan skriva ett nytt.
+Jag kontrollerar även Services, PVC och Route:
+
+```bash
+oc get services
+oc get pvc
+oc get route
+```
+
+Webb-Poddarna och databasen ska vara redo. PVC:n ska vara `Bound`.
+
+Jag öppnar sedan webbappen via Route och kontrollerar att sidan fungerar.
+
+Vid en ny installation ska jag kunna skriva ett nytt meddelande och se att det sparas.
+
+Vid en återstart med befintlig PVC ska även de gamla meddelandena finnas kvar.
 
 ## 4. Byta databaslösenord
 
-Jag ansluter till PostgreSQL och byter lösenord för walluser med kommandot \password walluser.
+Jag ansluter till PostgreSQL:
 
-Sedan uppdaterar jag samma lösenord i `database-secret.yaml` och applicerar Secret-filen igen.
+```bash
+oc exec -it deployment/wall-db -- psql -U walluser -d walldb
+```
 
-Till sist startar jag om webbappen:
+I PostgreSQL byter jag lösenord:
 
+```text
+\password walluser
+```
 
+Jag avslutar med:
+
+```text
+\q
+```
+
+Sedan ändrar jag lösenordet i min lokala Secret-fil så att det blir samma som i PostgreSQL.
+
+Jag uppdaterar Secret i OKD:
+
+```bash
+oc apply -f okd/database-secret-local.yaml
+```
+
+Efteråt startar jag om webbappen så att den läser det nya lösenordet:
+
+```bash
 oc rollout restart deployment/wall-web
+```
 
-
-Jag kontrollerar därefter att webbappen kan ansluta till databasen.
+Jag kontrollerar att webbappen fungerar igen. Under själva bytet kan det bli ett kort avbrott om lösenorden inte stämmer överens.
 
 ## 5. Felsökning
 
 Om något inte fungerar börjar jag med:
 
-
+```bash
 oc get pods
+```
 
+Sedan kan jag läsa webbappens loggar:
 
-Sedan kan jag läsa loggarna:
-
-
+```bash
 oc logs deployment/wall-web
+```
 
+Om en Pod har problem använder jag `oc describe pod` och anger Poddens namn.
 
-Om en Pod har problem kan jag använda oc describe pod för att se felmeddelanden och händelser.
+Under mina tester såg jag bland annat:
 
-Under mina incidenttester såg jag bland annat ImagePullBackOff, HTTP 503 och felaktigt databasnamn.
+- `ImagePullBackOff` när en image inte fanns.
+- HTTP 503 när webbappen inte kunde nå databasen.
+- Felaktigt databasnamn som gjorde att den nya webbcontainern startade om.
+
+Jag kan även kontrollera att databasens Service hittar rätt Pod:
+
+```bash
+oc describe service wall-db
+```
+
+Den ska ha selectorn `app=wall-db` och en adress under Endpoints.
+
+Jag kontrollerar också att ConfigMap har rätt databasnamn:
+
+```bash
+oc get configmap wall-config -o yaml
+```
+
+`DB_NAME` ska vara `walldb`.
 
 ## 6. Rollback
 
-Om en ny version inte fungerar kan jag gå tillbaka till föregående Deployment-revision:
+Om en ny webbversion inte fungerar kan jag återställa föregående Deployment-revision:
 
+```bash
 oc rollout undo deployment/wall-web
+```
+
+Sedan kontrollerar jag att utrullningen lyckades:
+
+```bash
+oc rollout status deployment/wall-web
+```
+
+Jag kontrollerar även att webbappen använder rätt image och fungerar via Route.
+
+Rollback kräver att det finns en tidigare fungerande revision i OKD.
 
 ## 7. Starta om utan att förlora databasen
 
-Databasen använder en PVC som heter `wall-db-data`.
+Databasen använder PVC:n `wall-db-data`, där meddelandena lagras.
 
-Jag kan starta om databasen med:
+Jag kan starta om PostgreSQL med:
 
+```bash
 oc rollout restart deployment/wall-db
+```
 
-Jag kontrollerar sedan att databasen startar och att volymen fortfarande finns:
+Jag kontrollerar att databasen startar igen:
 
-
+```bash
+oc rollout status deployment/wall-db
 oc get pvc
+```
 
-Meddelandena ligger på PVC:n och ska därför finnas kvar när databas-Podden startas om. Jag ska inte ta bort PVC:n eftersom den innehåller datan.
+Jag kontrollerar sedan att gamla meddelanden fortfarande visas i The Wall.
+
+Om Deployments och Services behöver återskapas kan jag använda samma YAML-filer som i installationsdelen.
+
+Jag ska behålla den befintliga Secret och PVC:n vid återskapandet.
+
+Jag ska inte ta bort PVC:n eftersom den innehåller datan.
+
+En PVC är inte samma sak som en backup. För en riktig driftmiljö behöver PostgreSQL också säkerhetskopieras separat. Det har jag inte testat i det här projektet.
