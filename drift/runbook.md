@@ -268,4 +268,4 @@ Jag ska behålla den befintliga Secret och PVC:n vid återskapandet.
 
 Jag ska inte ta bort PVC:n eftersom den innehåller datan.
 
-En PVC är inte samma sak som en backup. För en riktig driftmiljö behöver PostgreSQL också säkerhetskopieras separat. Det har jag inte testat i det här projektet.
+Happy walling.
