@@ -119,7 +119,6 @@ oc apply -f okd/the-wall-route.yaml
 
 Route ska peka på Service `wall-web`.
 
-Jag använder inte `oc apply -f okd/` eftersom mappen även innehåller äldre YAML-filer och testfiler som inte ska installeras.
 
 ## 3. Kontrollera att allt fungerar
 
