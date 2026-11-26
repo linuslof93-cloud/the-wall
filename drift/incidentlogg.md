@@ -11,6 +11,14 @@ Tid: 25 november 2026, på kvällen. Exakt tid dokumenterades inte.
 
 **Bevis:** Jag använde `oc describe service wall-db` och såg att Endpoints var tomt.
 
+**Skärmbilder:**
+
+- [Felaktig Service-selector](../tester/Bevis/v9-felaktig-service-selector.png)
+- [Readiness 0/1 och inga omstarter](../tester/Bevis/v9-readiness-0-restarts-0.png)
+- [/health svarar 200 OK](../tester/Bevis/v9-health-200.png)
+- [/ svarar 503 Service Unavailable](../tester/Bevis/v9-startsida-503.png)
+
+
 Jag använde också port-forward direkt till en webb-pod och testade med curl:
 
 - `/health` gav `200 OK`.
@@ -23,6 +31,8 @@ Det visade att webbprocessen fortfarande kördes, men inte kunde läsa från dat
 **Verifiering:** Efter reparationen kunde webbappen ansluta till databasen igen. Jag kontrollerade senare att webb-poddarna var redo och att Service hade rätt selector och Endpoints.
 
 **Förebyggande förbättring:** Jag bör kontrollera Service-selector och Endpoints före deployments och efter ändringar, så att Service hittar rätt poddar.
+
+
 
 ## Incident 2 – Fel DB_NAME
 
@@ -37,6 +47,12 @@ Den nya webb-podden blev `0/1 Ready` och började starta om. De två gamla webb-
 En annan möjlig förklaring var att databasens Service inte fungerade, som under incident 1.
 
 **Bevis:** Med `oc logs --previous` såg jag:
+
+
+**Skärmbilder:**
+
+- [Felaktigt DB_NAME och problem med uppstart](../tester/Bevis/v9-incident2-crashloop.png)
+
 
 `FATAL: database "felaktigdb" does not exist`
 
