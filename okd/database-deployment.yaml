@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+        - name: database
+          image: quay.io/kurs/postgresql:2026-10-29
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: walldb
+            - name: POSTGRES_USER
+              value: walluser
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: database-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: database-storage
+          persistentVolumeClaim:
+            claimName: database-pvc

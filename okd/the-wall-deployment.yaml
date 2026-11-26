@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: the-wall
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: the-wall
+  template:
+    metadata:
+      labels:
+        app: the-wall
+    spec:
+      containers:
+        - name: the-wall
+          image: quay.io/limpich/the-wall:v2
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: database
+            - name: DB_NAME
+              value: walldb
+            - name: DB_USER
+              value: walluser
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_PASSWORD

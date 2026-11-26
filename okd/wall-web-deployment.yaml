@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wall-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wall-web
+  template:
+    metadata:
+      labels:
+        app: wall-web
+    spec:
+      containers:
+        - name: wall-web
+          image: quay.io/limpich/the-wall:v2
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"            
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 5
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: wall-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: wall-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: wall-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_PASSWORD

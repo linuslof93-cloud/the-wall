@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wall-load-8
+spec:
+  activeDeadlineSeconds: 90
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: load
+          image: quay.io/limpich/the-wall:v2
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              for client in 1 2 3 4 5 6 7 8; do
+                (
+                  for i in $(seq 1 30); do
+                    python -c 'import urllib.request; urllib.request.urlopen("http://wall-web/", timeout=3).read()' || echo "Anrop misslyckades"
+                  done
+                  echo "Klient $client har gjort 30 anrop"
+                ) &
+              done
+              wait
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

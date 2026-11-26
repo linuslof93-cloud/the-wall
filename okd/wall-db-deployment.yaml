@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wall-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wall-db
+  template:
+    metadata:
+      labels:
+        app: wall-db
+    spec:
+      containers:
+        - name: wall-db
+          image: quay.io/kurs/postgresql:2026-10-29
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          ports:
+            - containerPort: 5432
+          startupProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - walluser
+                - -d
+                - walldb
+            periodSeconds: 5
+            failureThreshold: 30
+
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - walluser
+                - -d
+                - walldb
+            periodSeconds: 5
+
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - walluser
+                - -d
+                - walldb
+            periodSeconds: 10
+          env:
+            - name: POSTGRES_DB
+              value: walldb
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: database-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: database-storage
+          persistentVolumeClaim:
+            claimName: wall-db-data
