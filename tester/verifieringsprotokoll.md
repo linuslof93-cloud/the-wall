@@ -95,20 +95,21 @@ Resultat: Webbappen och databasen startade igen. Gamla meddelanden fanns kvar oc
 
 
 
+
 ## Bevisfiler
 
-Här finns screenshots från testerna. Klicka på länkarna för att se resultaten.
+Här finns screenshots från mina tester. Klicka på länkarna för att se resultaten.
 
 | Test | Bevis |
 |---|---|
-| V1 – Bygge och start | [Imagebygge](bevis/v1-imagebygge.png), [Lokal start](bevis/v1-lokal-start.png), [Beroendeversioner](bevis/v1-beroendeversioner.png) |
-| V2 – Trafikkedja | [HTTPS och omdirigering](bevis/v2-https-redirect.png), [Meddelanden](bevis/v2-meddelanden.png) |
-| V3 – Nätverk | [Klient till webb](bevis/v3-klient-till-webb.png), [Blockerad databasanslutning](bevis/v3-databas-blockerad.png) |
-| V4 – Säkerhet | [Secret-referenser](bevis/v4-secret-referenser.png), [UID](bevis/v4-uid-webb.png), [Säkerhetsfält](bevis/v4-sakerhetsfalt.png) |
-| V5 – Lösenordsbyte | [Felaktigt lösenord nekas](bevis/v5-felaktigt-losenord-nekas.png) |
-| V6 – Persistens | [PVC Bound](bevis/v6-pvc-bound.png), [SQL-meddelanden](bevis/v6-meddelanden-sql.png), [PVC-UID](bevis/v6-pvc-uid.png) |
-| V7 – Skalning | [Lasttest](bevis/v7-last-4-klienter.png), [HPA 2 till 3 till 2](bevis/v7-hpa-2-3-2.png) |
-| V8 – Release | [Källkodsdiff](bevis/v8-kallkodsdiff.png), [ImagePullBackOff](bevis/v8-imagepullbackoff.png), [Imagefel](bevis/v8-image-pull-fel.png) |
-| V9 – Incidenter | [Felaktig selector](bevis/v9-felaktig-service-selector.png), [Readiness](bevis/v9-readiness-0-restarts-0.png), [Health 200](bevis/v9-health-200.png), [HTTP 503](bevis/v9-startsida-503.png), [Incident 2](bevis/v9-incident2-crashloop.png) |
-| V10 – Återskapande | [Borttagning](bevis/v10-borttagning.png), [Återskapande](bevis/v10-aterskapande.png), [Meddelanden kvar](bevis/v10-meddelanden-kvar.png) |
+| V1 – Bygge och start | [Imagebygge](Bevis/v1-imagebygge.png), [Lokal start](Bevis/v1-lokal-start.png), [Beroendeversioner](Bevis/v1-beroendeversioner.png) |
+| V2 – Trafikkedja | [HTTPS och omdirigering](Bevis/v2-https-redirect.png), [Meddelanden](Bevis/v2-meddelanden.png) |
+| V3 – Nätverk | [Klient till webb](Bevis/v3-klient-till-webb.png), [Blockerad databasanslutning](Bevis/v3-databas-blockerad.png) |
+| V4 – Säkerhet | [Secret-referenser](Bevis/v4-secret-referenser.png), [UID](Bevis/v4-uid-webb.png), [Säkerhetsfält](Bevis/v4-sakerhetsfalt.png) |
+| V5 – Lösenordsbyte | [Felaktigt lösenord nekas](Bevis/v5-felaktigt-losenord-nekas.png) |
+| V6 – Persistens | [PVC Bound](Bevis/v6-pvc-bound.png), [SQL-meddelanden](Bevis/v6-meddelanden-sql.png), [PVC-UID](Bevis/v6-pvc-uid.png) |
+| V7 – Skalning | [Lasttest](Bevis/v7-last-4-klienter.png), [HPA 2 till 3 till 2](Bevis/v7-hpa-2-3-2.png) |
+| V8 – Release | [Källkodsdiff](Bevis/v8-kallkodsdiff.png), [ImagePullBackOff](Bevis/v8-imagepullbackoff.png), [Imagefel](Bevis/v8-image-pull-fel.png) |
+| V9 – Incidenter | [Felaktig selector](Bevis/v9-felaktig-service-selector.png), [Readiness](Bevis/v9-readiness-0-restarts-0.png), [Health 200](Bevis/v9-health-200.png), [HTTP 503](Bevis/v9-startsida-503.png), [Incident 2](Bevis/v9-incident2-crashloop.png) |
+| V10 – Återskapande | [Borttagning](Bevis/v10-borttagning.png), [Återskapande](Bevis/v10-aterskapande.png), [Meddelanden kvar](Bevis/v10-meddelanden-kvar.png) |
 
